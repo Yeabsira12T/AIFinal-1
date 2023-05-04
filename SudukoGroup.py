@@ -178,3 +178,83 @@ possible, missing_num = self.all_exist(arr)
 if not possible:
 return False, '%d not placeable in box (%d, %d)' % (missing_num, i0, j0)
 return True, ""
+## ------- Candidate functions -------- ##
+def place_and_erase(self, r: int, c: int, x: int, constraint_prop=True): """ remove x as a candidate in the grid in this row, column and box""" # place candidate x
+self.grid[r][c] = x
+self.candidates[r][c] = set()
+# remove candidate x in neighbours
+inds_neighbours = self.get_neighbour_inds(r, c, flatten=True)
+erased = [(r, c)] # set of indices for constraint propogration
+erased += self.erase([x], inds_neighbours, [])
+# constraint propagation, through every index that was changed
+while erased and constraint_prop:
+i, j = erased.pop()
+inds_neighbours = self.get_neighbour_inds(i, j, flatten=False)
+for inds in inds_neighbours:
+uniques = self.get_unique(inds, type=[1, 2, 3])
+for inds_combo, combo in uniques:
+# passing back the erased here doesn't seem to be very helpful
+self.set_candidates(combo, inds_combo)
+erased += self.erase(combo, inds, inds_combo)
+inds_box = self.get_box_inds(i, j)
+pointers = self.pointing_combos(inds_box)
+for line, inds_pointer, num in pointers:
+erased += self.erase(num, line, inds_pointer)
+# keeps = self.box_line_reduction(inds_box) # doesn't work??
+# for inds_keep, nums in keeps:
+# self.erase(nums, inds_box, inds_keep)
+def erase(self, nums, indices, keep): """ erase nums as candidates in indices, but not in keep""" erased = []
+for i, j in indices:
+edited = False
+if ((i, j) in keep):
+continue
+for x in nums:
+if (x in self.candidates[i][j]):
+self.candidates[i][j].remove(x)
+edited = True
+if edited:
+erased.append((i, j))
+return erased
+def set_candidates(self, nums, indices): """set candidates at indices. Remove all other candidates""" erased = []
+for i, j in indices:
+# beware triples where the whole triple is not in each box
+old = self.candidates[i][j].intersection(nums)
+if self.candidates[i][j] != old:
+self.candidates[i][j] = old.copy()
+erased.append((i, j)) # made changes here
+return erased
+def count_candidates(self, indices):
+count = [[] for _ in range(self.n + 1)]
+# get counts
+for i, j in indices:
+for num in self.candidates[i][j]:
+count[num].append((i, j))
+return count
+def get_unique(self, indices, type=(0, 1, 2)):
+# See documentation at https://www.sudokuwiki.org/Hidden_Candidates
+groups = self.count_candidates(indices)
+uniques = [] # final set of unique candidates to return
+uniques_temp = {2: [], 3: []} # potential unique candidates
+for num, group_inds in enumerate(groups):
+c = len(group_inds)
+if c == 1 and (1 in type):
+uniques.append((group_inds, [num]))
+if c == 2 and ((2 in type) or (3 in type)):
+uniques_temp[2].append(num)
+if c == 3 and (3 in type):
+uniques_temp[3].append(num)
+uniques_temp[3] += uniques_temp[2]
+# check for matching combos (both hidden and naked)
+for c in [2, 3]:
+if c not in type:
+continue
+# make every possible combination
+for combo in list(combinations(uniques_temp[c], c)):
+group_inds = set(groups[combo[0]])
+for k in range(1, c):
+# if positions are shared, this will not change the length
+group_inds = group_inds | set(groups[combo[k]])
+if len(group_inds) == c:
+# unique combo (pair or triple) found
+uniques.append((list(group_inds), combo))
+return uniques
