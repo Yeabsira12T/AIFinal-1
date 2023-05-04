@@ -114,3 +114,67 @@ class Sudoku():
             if c > 1:
                 return False  # more than 1 of value
         return True
+def all_exist(self, arr): """ verify that there is at least one of each number present """ count = self.counting(arr)
+missing = None
+for num, c in enumerate(count[1:]): # exclude 0:
+if c == 0:
+return False, num+1 # no value or candidate exists
+return True, missing
+def check_done(self, num_boxes=SIZE) -> bool: """ check if each row/column/box only has unique elements""" # check rows
+for i in range(self.n):
+if not self.all_unique(self.get_row(i)):
+return False
+# check columns
+for j in range(self.n):
+if not self.all_unique(self.get_col(j)):
+return False
+# check boxes
+for i0 in range(0, self.n, BOX_SIZE):
+for j0 in range(0, self.n, BOX_SIZE):
+if not self.all_unique(self.get_box(i0, j0)):
+return False
+return True
+def get_candidates(self, start, end): " get candidates within two corners of a rectangle/column/row" candidates = set()
+for i in range(start[0], end[0] + 1):
+for j in range(start[1], end[1] + 1):
+candidates = candidates | self.candidates[i][j]
+return candidates
+def check_possible(self): """ check if each row/column/box can have all unique elements""" # get rows
+rows_set = []
+for i in range(self.n):
+inds = [(i, j) for j in range(self.n)]
+rows_set.append(inds)
+# get columns
+cols_set = []
+for j in range(self.n):
+inds = [(i, j) for i in range(self.n)]
+cols_set.append(inds)
+# get diagonals
+diags_set = []
+if self.is_X_Sudoku:
+diags_set.append(self.get_diagonals(0, 0))
+diags_set.append(self.get_diagonals(0, self.n-1))
+# check rows, columns and diagonals
+type_ = ['row', 'column', 'diagonal']
+for t, inds_set in enumerate([rows_set, cols_set]):
+for k, inds in enumerate(inds_set):
+arr = [self.grid[i][j] for i, j in inds]
+if not self.no_duplicates(arr):
+return False, 'Duplicate values in %s %d' % (type_[t], k)
+arr += list(self.get_candidates(inds[0], inds[-1]))
+possible, missing_num = self.all_exist(arr)
+if not possible:
+return False, '%d not placeable in %s %d' % (missing_num, type_[t], k)
+# check boxes
+for i0 in range(0, self.n, BOX_SIZE):
+for j0 in range(0, self.n, BOX_SIZE):
+arr = self.get_box(i0, j0)[:]
+if not self.no_duplicates(arr):
+return False, 'Duplicate values in box (%d, %d)' % (i0, j0)
+for i in range(i0, i0 + BOX_SIZE):
+for j in range(j0, j0 + BOX_SIZE):
+arr += list(self.candidates[i][j])
+possible, missing_num = self.all_exist(arr)
+if not possible:
+return False, '%d not placeable in box (%d, %d)' % (missing_num, i0, j0)
+return True, ""
